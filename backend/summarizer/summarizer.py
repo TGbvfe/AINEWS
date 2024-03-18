@@ -18,7 +18,6 @@ def get_articles():
                 'content': article['content'],
                 'title': article['title'],
                 'url': article['url'],
-                'source': source,
                 'author': article['author'] if 'author' in article else 'Unknown'
             }
             articles.append(article_data)
@@ -33,11 +32,12 @@ def main():
         # Write the article information to news_store.json in the "New" folder
         article_data = {}
         for i, article in enumerate(articles, start=1):
-            article_data[f'content{i}'] = article['content']
-            article_data[f'title{i}'] = article['title']
-            article_data[f'url{i}'] = article['url']
-            article_data[f'source{i}'] = article['source']
-            article_data[f'author{i}'] = article['author']
+            article_data[f'article{i}'] = {
+                'content': article['content'],
+                'title': article['title'],
+                'url': article['url'],
+                'author': article['author']
+            }
 
         with open('New/news_store.json', 'w') as f:
             json.dump(article_data, f, indent=4)
