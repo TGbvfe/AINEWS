@@ -1,29 +1,49 @@
+import os
 import json
-from hugchat import hugchat
-from hugchat.login import Login
+import requests
+from newsapi import NewsApiClient
 
-# Log in to huggingface and grant authorization to huggingchat
-EMAIL = "Kuzeshell69@gmail.com"
-PASSWD = "Wordpass197900"
-cookie_path_dir = "New./cookies"
-sign = Login(EMAIL, PASSWD)
-cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
+# Initialize the NewsAPI client
+newsapi = NewsApiClient(api_key='0060309c3ac44f6daa0245c75b842ba0')
 
-# Create your ChatBot
-chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
+# List of news sources
+sources = ['wall-street-journal', 'cnn', 'cnbc', 'fox-news', 'bbc-news', 'nbc-news']
 
-# Read the JSON file and extract the values of content1 through content5
-with open("New/news_store.json", "r") as f:
-    articles = json.load(f)
-    contents = [articles[i].get("content1") for i in range(5)]
+def get_articles():
+    articles = []
+    for source in sources:
+        source_articles = newsapi.get_top_headlines(sources=source, language='en')['articles'][:5]
+        for article in source_articles:
+            article_data = {
+                'content': article['content'],
+                'title': article['title'],
+                'url': article['url'],
+                'author': article['author'] if 'author' in article else 'Unknown'
+            }
+            articles.append(article_data)
+    return articles
 
-# Parse the contents to the Hugging Face chatbot
-summaries = []
-for i, content in enumerate(contents):
-    query_result = chatbot.query(f"Summarize the following article in bullet points:{content}", web_search=True)
-    summaries.append(query_result)
+def main():
+    articles = get_articles()
+    if articles:
+        # Create the "New" folder if it doesn't exist
+        os.makedirs('New', exist_ok=True)
 
-# Print the summaries
-for i, summary in enumerate(summaries):
-    print(f"Summary of article {i+1}:")
-    print(summary)
+        # Write the article information to news_store.json in the "New" folder
+        article_data = {}
+        for i, article in enumerate(articles, start=1):
+            article_data[f'article{i}'] = {
+                'content': article['content'],
+                'title': article['title'],
+                'url': article['url'],
+                'author': article['author']
+            }
+
+        with open('New/news_store.json', 'w') as f:
+            json.dump(article_data, f, indent=4)
+        print("Article information stored in New/news_store.json")
+    else:
+        print("No articles found.")
+
+if __name__ == "__main__":
+    main()
