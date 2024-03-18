@@ -1,40 +1,49 @@
+import os
+import json
 import requests
 from newsapi import NewsApiClient
-from transformers import pipeline
 
 # Initialize the NewsAPI client
 newsapi = NewsApiClient(api_key='0060309c3ac44f6daa0245c75b842ba0')
 
-# Initialize the summarization pipeline
-summarizer = pipeline('summarization')
-
 # List of news sources
-sources = ['wall-street-journal', 'cnn', 'cnbc', 'fox-news', 'bbc-news']
+sources = ['wall-street-journal', 'cnn', 'cnbc', 'fox-news', 'bbc-news', 'nbc-news']
 
-def get_news_summaries():
-    news_summaries = []
+def get_articles():
+    articles = []
     for source in sources:
-        articles = newsapi.get_top_headlines(sources=source, language='en')['articles']
-
-        for article in articles[:10]:
-            article_summary = {
+        source_articles = newsapi.get_top_headlines(sources=source, language='en')['articles'][:5]
+        for article in source_articles:
+            article_data = {
+                'content': article['content'],
                 'title': article['title'],
-                'link': article['url'],
-                'author': article['author'] if article['author'] else 'Unknown',
-                'bulletPoints': []
+                'url': article['url'],
+                'source': source,
+                'author': article['author'] if 'author' in article else 'Unknown'
             }
+            articles.append(article_data)
+    return articles
 
-            if 'content' in article and article['content']:
-                try:
-                    summary = summarizer(article['content'], max_length=200, min_length=30, do_sample=False)[0]['summary_text']
-                    bullet_points = [f"- {point.strip()}" for point in summary.split('.') if point.strip()]
-                    bullet_points = bullet_points[:5]  # Take the first 5 bullet points
-                    article_summary['bulletPoints'] = bullet_points
-                except (KeyError, IndexError):
-                    article_summary['bulletPoints'] = ["- Unable to generate key points for this article."]
-            else:
-                article_summary['bulletPoints'] = ["- Article content not available."]
+def main():
+    articles = get_articles()
+    if articles:
+        # Create the "New" folder if it doesn't exist
+        os.makedirs('New', exist_ok=True)
 
-            news_summaries.append(article_summary)
+        # Write the article information to news_store.json in the "New" folder
+        article_data = {}
+        for i, article in enumerate(articles, start=1):
+            article_data[f'content{i}'] = article['content']
+            article_data[f'title{i}'] = article['title']
+            article_data[f'url{i}'] = article['url']
+            article_data[f'source{i}'] = article['source']
+            article_data[f'author{i}'] = article['author']
 
-    return news_summaries
+        with open('New/news_store.json', 'w') as f:
+            json.dump(article_data, f, indent=4)
+        print("Article information stored in New/news_store.json")
+    else:
+        print("No articles found.")
+
+if __name__ == "__main__":
+    main()
